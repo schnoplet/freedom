@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>FREEDOM 🦅🦅🦅</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<style>
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: black;
+  font-family: Impact, Arial Black, sans-serif;
+}
+
+#overlay {
+  position: fixed;
+  inset: 0;
+  background: black;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  z-index: 9999;
+  cursor: pointer;
+  text-shadow: 4px 4px 0 red, -4px -4px 0 blue;
+}
+
+#bgVideo {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  object-fit: cover;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.dvd {
+  position: absolute;
+  width: 240px;
+  height: 135px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+video {
+  outline: none;
+  border: none;
+}
+
+video::-webkit-media-controls {
+  display: none !important;
+}
+
+video::-webkit-media-controls-enclosure {
+  display: none !important;
+}
+</style>
+</head>
+<body>
+
+<div id="overlay">CLICK TO START FREEDOM 🦅</div>
+
+<video id="bgVideo" src="freedom.mp4" muted loop playsinline disablepictureinpicture controls="false"></video>
+<audio id="bgMusic" src="freedom2.mp3" preload="auto"></audio>
+
+<script>
+const dvds = [];
+const overlay = document.getElementById('overlay');
+const bgVideo = document.getElementById('bgVideo');
+const bgMusic = document.getElementById('bgMusic');
+let started = false;
+
+const MIN_DVDS = 2;
+const MAX_DVDS = 15;
+
+// --- ZERO-FREEZE DESYNC SYSTEM ---
+// Instead of seeking OR fast-forwarding, we phase-desync using playbackRate drift only
+
+function driftPlayback(media) {
+  const base = 1;
+  const drift = (Math.random() < 0.5 ? -1 : 1) * (0.02 + Math.random() * 0.08);
+  media.playbackRate = base + drift;
+
+  setTimeout(() => {
+    media.playbackRate = base;
+  }, 800 + Math.random() * 1200);
+}
+
+function burstWarp(media) {
+  const warp = Math.random() < 0.5
+    ? 0.2 + Math.random() * 0.3
+    : 1.5 + Math.random() * 1.5;
+
+  const original = media.playbackRate;
+  media.playbackRate = warp;
+
+  setTimeout(() => {
+    media.playbackRate = original;
+  }, 600 + Math.random() * 1200);
+}
+
+function spawnDVD(x = Math.random() * (window.innerWidth - 240), y = Math.random() * (window.innerHeight - 135)) {
+  const v = document.createElement('video');
+  v.className = 'dvd';
+  v.src = 'freedom.mp4';
+  v.muted = true;
+  v.loop = true;
+  v.playsInline = true;
+  v.disablePictureInPicture = true;
+  v.controls = false;
+
+  document.body.appendChild(v);
+  v.play();
+
+  dvds.push({
+    el: v,
+    x,
+    y,
+    vx: (Math.random() * 4 + 1) * (Math.random() < 0.5 ? -1 : 1),
+    vy: (Math.random() * 4 + 1) * (Math.random() < 0.5 ? -1 : 1)
+  });
+}
+
+function removeRandomDVD() {
+  if (dvds.length <= MIN_DVDS) return;
+  const i = Math.floor(Math.random() * dvds.length);
+  const d = dvds.splice(i, 1)[0];
+  d.el.remove();
+}
+
+// --- Audio manager (max 2 layers) ---
+const audioPool = [];
+
+function playFreedomAudio() {
+  audioPool.filter(a => a.ended).forEach(a => audioPool.splice(audioPool.indexOf(a), 1));
+  if (audioPool.length >= 2) return;
+
+  const a = new Audio('freedom2.mp3');
+  a.onloadedmetadata = () => {
+    a.currentTime = Math.random() * Math.max(0, a.duration - 10);
+    a.play();
+  };
+  audioPool.push(a);
+}
+
+// --- Chaos timers ---
+setInterval(() => {
+  if (!started) return;
+  driftPlayback(bgVideo);
+  dvds.forEach(d => driftPlayback(d.el));
+}, 1200);
+
+setInterval(() => {
+  if (!started) return;
+  if (Math.random() < 0.4) {
+    burstWarp(bgVideo);
+    dvds.forEach(d => burstWarp(d.el));
+  }
+}, 2500);
+
+setInterval(() => {
+  if (!started) return;
+  if (dvds.length < MIN_DVDS) spawnDVD();
+  else if (dvds.length > MAX_DVDS) removeRandomDVD();
+  else Math.random() < 0.5 ? spawnDVD() : removeRandomDVD();
+}, 2200);
+
+function update() {
+  if (!started) return;
+
+  for (const d of dvds) {
+    d.x += d.vx;
+    d.y += d.vy;
+
+    let hitX = false;
+    let hitY = false;
+
+    if (d.x <= 0 || d.x + 240 >= window.innerWidth) {
+      d.vx *= -1;
+      hitX = true;
+    }
+    if (d.y <= 0 || d.y + 135 >= window.innerHeight) {
+      d.vy *= -1;
+      hitY = true;
+    }
+
+    if (hitX && hitY) playFreedomAudio();
+
+    d.el.style.left = d.x + 'px';
+    d.el.style.top = d.y + 'px';
+  }
+
+  requestAnimationFrame(update);
+}
+
+overlay.addEventListener('click', () => {
+  if (started) return;
+  started = true;
+
+  bgVideo.disablePictureInPicture = true;
+  bgVideo.controls = false;
+  bgVideo.play();
+
+  bgMusic.loop = true;
+  bgMusic.currentTime = Math.random() * Math.max(0, bgMusic.duration - 10);
+  bgMusic.play();
+
+  for (let i = 0; i < MIN_DVDS; i++) spawnDVD();
+
+  overlay.remove();
+  update();
+});
+</script>
+
+</body>
+</html>
